@@ -1,0 +1,88 @@
+%YAML 1.1
+---
+vars:
+  address-groups:
+    HOME_NET: "{{ home_net }}"
+    EXTERNAL_NET: "!$HOME_NET"
+    HTTP_SERVERS: "$HOME_NET"
+  port-groups:
+    HTTP_PORTS: "{{ http_ports }}"
+    SSH_PORTS: "{{ ssh_ports }}"
+
+af-packet:
+  - interface: {{ interface1 }}
+    mode: inline
+    copy-mode: ips
+    threads: auto
+    cluster-type: cluster_flow
+    cluster-id: 101
+    use-mmap: yes
+    tpacket-v3: yes
+    checksum-checks: no
+    bypass: no
+    copy-iface: {{ interface2 }}
+  - interface: {{ interface2 }}
+    mode: inline
+    copy-mode: ips
+    threads: auto
+    cluster-type: cluster_flow
+    cluster-id: 102
+    use-mmap: yes
+    tpacket-v3: yes
+    checksum-checks: no
+    bypass: no
+    copy-iface: {{ interface1 }}
+
+outputs:
+  - fast:
+      enabled: no
+
+  - eve-log:
+      enabled: yes
+      filetype: unix_stream
+      filename: /var/run/suricata/suricata.sock
+      rotate-interval: day
+      rotate-compress: true
+      types:
+        - alert:
+            payload: yes
+            payload-printable: yes
+            packet: yes
+            rule: yes
+            metadata: yes
+            flow: yes
+            app-layer: yes
+            http:
+              enabled: yes
+              body: yes
+              body-printable: yes
+            tls:
+              enabled: yes
+              certificates: yes
+              certificate-files: yes
+        - drop:
+            alerts: yes
+            flows: all
+
+default-rule-path: /var/lib/suricata/rules
+rule-files:
+  - suricata.rules
+
+host:
+  hash-size: 4096
+  prealloc: 1000
+  memcap: 32mb
+
+# Reputation settings (polling handled externally by fetch-ipreputation.sh)
+reputation:
+  enabled: yes
+  default-path: /var/lib/suricata
+  files:
+    - reputation.list
+  skip-keyword: false
+
+reputation-categories-file: /var/lib/suricata/reputation.categories.txt
+  # format: IP,category-id,score (multiple lines per IP allowed)
+  # categories file stored separately for reference
+
+runmode: autofp
