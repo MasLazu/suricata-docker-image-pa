@@ -9,6 +9,11 @@ vars:
     HTTP_PORTS: "{{ http_ports }}"
     SSH_PORTS: "{{ ssh_ports }}"
 
+# Unix command socket for suricatasc
+unix-command:
+  enabled: yes
+  filename: /var/run/suricata/suricata-command.socket
+
 af-packet:
   - interface: {{ interface1 }}
     mode: inline
@@ -63,6 +68,12 @@ outputs:
         - drop:
             alerts: yes
             flows: all
+        - flow:
+            enabled: no
+        - stats:
+            enabled: no
+        - metadata:
+            enabled: no
 
 default-rule-path: /var/lib/suricata/rules
 rule-files:
@@ -73,15 +84,11 @@ host:
   prealloc: 1000
   memcap: 32mb
 
-# Reputation settings (polling handled externally by fetch-ipreputation.sh)
-reputation:
-  enabled: yes
-  default-path: /var/lib/suricata
-  files:
-    - reputation.list
-  skip-keyword: false
-
+# IP Reputation settings (polling handled externally by fetch-ipreputation.sh)
 reputation-categories-file: /var/lib/suricata/reputation.categories.txt
+default-reputation-path: /var/lib/suricata
+reputation-files:
+  - reputation.list
   # format: IP,category-id,score (multiple lines per IP allowed)
   # categories file stored separately for reference
 
