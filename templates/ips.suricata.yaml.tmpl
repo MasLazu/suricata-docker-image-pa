@@ -9,6 +9,11 @@ vars:
     HTTP_PORTS: "{{ http_ports }}"
     SSH_PORTS: "{{ ssh_ports }}"
 
+# Unix command socket for suricatasc
+unix-command:
+  enabled: yes
+  filename: /var/run/suricata/suricata-command.socket
+
 af-packet:
   - interface: {{ interface1 }}
     mode: inline
