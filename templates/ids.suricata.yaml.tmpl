@@ -64,6 +64,13 @@ outputs:
             alerts: yes
             flows: all
 
+  - stats:
+      enabled: yes
+      filename: /var/log/suricata/stats.log
+      interval: 60
+    types:
+      - detect
+
 default-rule-path: /var/lib/suricata/rules
 rule-files:
   - suricata.rules
@@ -73,14 +80,10 @@ host:
   prealloc: 1000
   memcap: 32mb
 
-# Reputation settings (polling handled externally by fetch-ipreputation.sh)
-reputation:
-  enabled: yes
-  default-path: /var/lib/suricata
-  files:
-    - reputation.list
-  skip-keyword: false
-
+# IP Reputation settings (polling handled externally by fetch-ipreputation.sh)
 reputation-categories-file: /var/lib/suricata/reputation.categories.txt
+default-reputation-path: /var/lib/suricata
+reputation-files:
+  - reputation.list
 
 runmode: autofp
