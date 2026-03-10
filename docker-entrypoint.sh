@@ -55,6 +55,7 @@ if [ -f "$TEMPLATE" ]; then
     echo "Rendering ${TEMPLATE} to /etc/suricata/suricata.yaml"
 
     pcap_all_enabled="${PCAP_ALL_ENABLED:-no}"
+    pcap_drop_enabled="${PCAP_DROP_ENABLED:-no}"
     pcap_alerts_enabled="${PCAP_ALERTS_ENABLED:-no}"
     pcap_dir="${PCAP_DIR:-/var/log/suricata/pcap}"
     pcap_limit="${PCAP_LIMIT:-100mb}"
@@ -71,6 +72,24 @@ if [ -f "$TEMPLATE" ]; then
       max-files: ${pcap_max_files}
       compression: none
       mode: normal
+      use-stream-depth: no
+      honor-pass-rules: no
+EOF
+)
+    fi
+
+    pcap_drop_block=""
+    if [[ "${pcap_drop_enabled}" == "yes" ]]; then
+        mkdir -p "${pcap_dir}/drop"
+        pcap_drop_block=$(cat <<EOF
+  - pcap-log:
+      enabled: yes
+      filename: ${pcap_dir}/drop/drop.pcap
+      limit: ${pcap_limit}
+      max-files: ${pcap_max_files}
+      compression: none
+      mode: normal
+      conditional: drop
       use-stream-depth: no
       honor-pass-rules: no
 EOF
@@ -104,14 +123,16 @@ EOF
         -e "s|{{ interface2 }}|${INTERFACE2}|g" \
         "$TEMPLATE" > "${tmp_render}"
 
-    python3 - <<'PY' "${tmp_render}" "${pcap_all_block}" "${pcap_alerts_block}"
+    python3 - <<'PY' "${tmp_render}" "${pcap_all_block}" "${pcap_drop_block}" "${pcap_alerts_block}"
 from pathlib import Path
 import sys
 path = Path(sys.argv[1])
 pcap_all = sys.argv[2]
-pcap_alerts = sys.argv[3]
+pcap_drop = sys.argv[3]
+pcap_alerts = sys.argv[4]
 text = path.read_text()
 text = text.replace("{{ pcap_all_output }}", pcap_all.rstrip())
+text = text.replace("{{ pcap_drop_output }}", pcap_drop.rstrip())
 text = text.replace("{{ pcap_alerts_output }}", pcap_alerts.rstrip())
 path.write_text(text)
 PY

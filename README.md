@@ -67,8 +67,11 @@ Available environment variables:
 - `PCAP_ALL_ENABLED` (default: `no`)
   - Enable a `pcap-log` output that writes all packets seen by Suricata.
 
+- `PCAP_DROP_ENABLED` (default: `no`)
+  - Enable a `pcap-log` output with `conditional: drop` to write only packets associated with Suricata drop action. This is the primary output for IPS packet-count evaluation.
+
 - `PCAP_ALERTS_ENABLED` (default: `no`)
-  - Enable a second `pcap-log` output with `conditional: alerts` to write only packets associated with Suricata alerts. In IPS mode this is a practical approximation for blocked/interesting traffic.
+  - Enable an additional `pcap-log` output with `conditional: alerts` to write packets associated with Suricata alerts.
 
 - `PCAP_DIR` (default: `/var/log/suricata/pcap`)
   - Base directory inside the container where PCAP files are written.
@@ -108,6 +111,7 @@ SURICATA_OPTIONS=
 
 # Optional PCAP outputs
 PCAP_ALL_ENABLED=no
+PCAP_DROP_ENABLED=no
 PCAP_ALERTS_ENABLED=no
 PCAP_DIR=/var/log/suricata/pcap
 PCAP_LIMIT=100mb
@@ -168,7 +172,8 @@ services:
       # - CATEGORIES_DEST=/var/lib/suricata/reputation.categories.txt
       # PCAP capture for evaluation / packet counting
       # - PCAP_ALL_ENABLED=yes
-      # - PCAP_ALERTS_ENABLED=yes
+      # - PCAP_DROP_ENABLED=yes
+      # - PCAP_ALERTS_ENABLED=no
       # - PCAP_DIR=/var/log/suricata/pcap
       # - PCAP_LIMIT=100mb
       # - PCAP_MAX_FILES=1000
@@ -181,19 +186,21 @@ This image can optionally enable Suricata `pcap-log` outputs at runtime without 
 When enabled, the entrypoint injects one or both of these outputs into the rendered `suricata.yaml`:
 
 - **All packets** via `PCAP_ALL_ENABLED=yes`
-- **Alert-associated packets** via `PCAP_ALERTS_ENABLED=yes`
+- **Dropped packets** via `PCAP_DROP_ENABLED=yes`
+- **Alert-associated packets** via `PCAP_ALERTS_ENABLED=yes` (optional)
 
 Files are written under `PCAP_DIR` with separate subdirectories:
 
 - `${PCAP_DIR}/all/`
+- `${PCAP_DIR}/drop/`
 - `${PCAP_DIR}/alerts/`
 
-This is useful for lab evaluation where you want to compare:
+For IPS evaluation, the main intended comparison is:
 
 - all observed packets
-- Suricata-interesting / alert-associated packets
+- dropped packets
 
-and then classify packet counts later by source/destination IP.
+with alert-associated packets kept optional for troubleshooting or broader analysis.
 
 ## IP Reputation Integration
 
