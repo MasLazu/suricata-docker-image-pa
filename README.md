@@ -68,8 +68,8 @@ Available environment variables:
   - Enable a single Suricata `pcap-log` output. Supported values:
     - `off`: disable pcap logging
     - `all`: capture all packets seen by Suricata
-    - `drop`: capture packets associated with Suricata drop action
     - `alerts`: capture packets associated with Suricata alerts
+    - `tag`: capture tagged packets when rules use Suricata tagging
 
 - `PCAP_DIR` (default: `/var/log/suricata/pcap`)
   - Base directory inside the container where PCAP files are written.
@@ -167,7 +167,7 @@ services:
       # - REPUTATION_DEST=/var/lib/suricata/reputation.list
       # - CATEGORIES_DEST=/var/lib/suricata/reputation.categories.txt
       # Optional single Suricata pcap-log mode
-      # - PCAP_MODE=drop
+      # - PCAP_MODE=all
       # - PCAP_DIR=/var/log/suricata/pcap
       # - PCAP_LIMIT=100mb
       # - PCAP_MAX_FILES=1000
@@ -180,19 +180,20 @@ This image can optionally enable a single Suricata `pcap-log` output at runtime 
 Set `PCAP_MODE` to one of:
 
 - `all`
-- `drop`
 - `alerts`
+- `tag`
 
 Files are written under `PCAP_DIR` in a matching subdirectory:
 
 - `${PCAP_DIR}/all/`
-- `${PCAP_DIR}/drop/`
 - `${PCAP_DIR}/alerts/`
+- `${PCAP_DIR}/tag/`
 
-Note: on the tested sensor runtime, Suricata only allowed one active `pcap-log` instance at a time. For evaluation workflows that need both **all traffic** and **drop traffic**, use:
+Note: on the tested sensor runtime, Suricata only allowed one active `pcap-log` instance at a time, and `conditional: drop` was not accepted by this build. The practical evaluation workflow for this repository is therefore:
 
-- host-side capture (for example `tcpdump`) for **all traffic**
-- Suricata `PCAP_MODE=drop` for **drop traffic**
+- enable `PCAP_MODE=all` to capture the full packet universe inside Suricata
+- use EVE `action` values to distinguish `drop` from `allowed`
+- correlate dropped decisions from EVE against the full PCAP when counting packets
 
 ## IP Reputation Integration
 

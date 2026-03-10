@@ -78,22 +78,6 @@ if [ -f "$TEMPLATE" ]; then
 EOF
 )
             ;;
-        drop)
-            mkdir -p "${pcap_dir}/drop"
-            pcap_block=$(cat <<EOF
-  - pcap-log:
-      enabled: yes
-      filename: ${pcap_dir}/drop/drop.pcap
-      limit: ${pcap_limit}
-      max-files: ${pcap_max_files}
-      compression: none
-      mode: normal
-      conditional: drop
-      use-stream-depth: no
-      honor-pass-rules: no
-EOF
-)
-            ;;
         alerts)
             mkdir -p "${pcap_dir}/alerts"
             pcap_block=$(cat <<EOF
@@ -110,8 +94,24 @@ EOF
 EOF
 )
             ;;
+        tag)
+            mkdir -p "${pcap_dir}/tag"
+            pcap_block=$(cat <<EOF
+  - pcap-log:
+      enabled: yes
+      filename: ${pcap_dir}/tag/tag.pcap
+      limit: ${pcap_limit}
+      max-files: ${pcap_max_files}
+      compression: none
+      mode: normal
+      conditional: tag
+      use-stream-depth: no
+      honor-pass-rules: no
+EOF
+)
+            ;;
         *)
-            echo "Error: unsupported PCAP_MODE '${pcap_mode}'. Use one of: off, all, drop, alerts"
+            echo "Error: unsupported PCAP_MODE '${pcap_mode}'. Use one of: off, all, alerts, tag"
             exit 1
             ;;
     esac
