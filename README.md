@@ -64,14 +64,12 @@ Available environment variables:
 - `SURICATA_OPTIONS` (optional)
   - Additional Suricata command-line options (optional). Example: `-k none`.
 
-- `PCAP_ALL_ENABLED` (default: `no`)
-  - Enable a `pcap-log` output that writes all packets seen by Suricata.
-
-- `PCAP_DROP_ENABLED` (default: `no`)
-  - Enable a `pcap-log` output with `conditional: drop` to write only packets associated with Suricata drop action. This is the primary output for IPS packet-count evaluation.
-
-- `PCAP_ALERTS_ENABLED` (default: `no`)
-  - Enable an additional `pcap-log` output with `conditional: alerts` to write packets associated with Suricata alerts.
+- `PCAP_MODE` (default: `off`)
+  - Enable a single Suricata `pcap-log` output. Supported values:
+    - `off`: disable pcap logging
+    - `all`: capture all packets seen by Suricata
+    - `drop`: capture packets associated with Suricata drop action
+    - `alerts`: capture packets associated with Suricata alerts
 
 - `PCAP_DIR` (default: `/var/log/suricata/pcap`)
   - Base directory inside the container where PCAP files are written.
@@ -109,10 +107,8 @@ ENABLE_CRON=yes
 # Extra options
 SURICATA_OPTIONS=
 
-# Optional PCAP outputs
-PCAP_ALL_ENABLED=no
-PCAP_DROP_ENABLED=no
-PCAP_ALERTS_ENABLED=no
+# Optional Suricata pcap-log output
+PCAP_MODE=off
 PCAP_DIR=/var/log/suricata/pcap
 PCAP_LIMIT=100mb
 PCAP_MAX_FILES=1000
@@ -170,10 +166,8 @@ services:
       # - CATEGORIES_ENDPOINT=/api/v1/reputation/categories
       # - REPUTATION_DEST=/var/lib/suricata/reputation.list
       # - CATEGORIES_DEST=/var/lib/suricata/reputation.categories.txt
-      # PCAP capture for evaluation / packet counting
-      # - PCAP_ALL_ENABLED=yes
-      # - PCAP_DROP_ENABLED=yes
-      # - PCAP_ALERTS_ENABLED=no
+      # Optional single Suricata pcap-log mode
+      # - PCAP_MODE=drop
       # - PCAP_DIR=/var/log/suricata/pcap
       # - PCAP_LIMIT=100mb
       # - PCAP_MAX_FILES=1000
@@ -181,26 +175,24 @@ services:
 
 ## Optional PCAP capture
 
-This image can optionally enable Suricata `pcap-log` outputs at runtime without editing the YAML templates by hand.
+This image can optionally enable a single Suricata `pcap-log` output at runtime without editing the YAML templates by hand.
 
-When enabled, the entrypoint injects one or both of these outputs into the rendered `suricata.yaml`:
+Set `PCAP_MODE` to one of:
 
-- **All packets** via `PCAP_ALL_ENABLED=yes`
-- **Dropped packets** via `PCAP_DROP_ENABLED=yes`
-- **Alert-associated packets** via `PCAP_ALERTS_ENABLED=yes` (optional)
+- `all`
+- `drop`
+- `alerts`
 
-Files are written under `PCAP_DIR` with separate subdirectories:
+Files are written under `PCAP_DIR` in a matching subdirectory:
 
 - `${PCAP_DIR}/all/`
 - `${PCAP_DIR}/drop/`
 - `${PCAP_DIR}/alerts/`
 
-For IPS evaluation, the main intended comparison is:
+Note: on the tested sensor runtime, Suricata only allowed one active `pcap-log` instance at a time. For evaluation workflows that need both **all traffic** and **drop traffic**, use:
 
-- all observed packets
-- dropped packets
-
-with alert-associated packets kept optional for troubleshooting or broader analysis.
+- host-side capture (for example `tcpdump`) for **all traffic**
+- Suricata `PCAP_MODE=drop` for **drop traffic**
 
 ## IP Reputation Integration
 

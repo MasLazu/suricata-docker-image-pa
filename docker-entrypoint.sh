@@ -54,17 +54,18 @@ if [ -f "$TEMPLATE" ]; then
     fi
     echo "Rendering ${TEMPLATE} to /etc/suricata/suricata.yaml"
 
-    pcap_all_enabled="${PCAP_ALL_ENABLED:-no}"
-    pcap_drop_enabled="${PCAP_DROP_ENABLED:-no}"
-    pcap_alerts_enabled="${PCAP_ALERTS_ENABLED:-no}"
+    pcap_mode="${PCAP_MODE:-off}"
     pcap_dir="${PCAP_DIR:-/var/log/suricata/pcap}"
     pcap_limit="${PCAP_LIMIT:-100mb}"
     pcap_max_files="${PCAP_MAX_FILES:-1000}"
 
-    pcap_all_block=""
-    if [[ "${pcap_all_enabled}" == "yes" ]]; then
-        mkdir -p "${pcap_dir}/all"
-        pcap_all_block=$(cat <<EOF
+    pcap_block=""
+    case "${pcap_mode}" in
+        off|none|"")
+            ;;
+        all)
+            mkdir -p "${pcap_dir}/all"
+            pcap_block=$(cat <<EOF
   - pcap-log:
       enabled: yes
       filename: ${pcap_dir}/all/all.pcap
@@ -76,12 +77,10 @@ if [ -f "$TEMPLATE" ]; then
       honor-pass-rules: no
 EOF
 )
-    fi
-
-    pcap_drop_block=""
-    if [[ "${pcap_drop_enabled}" == "yes" ]]; then
-        mkdir -p "${pcap_dir}/drop"
-        pcap_drop_block=$(cat <<EOF
+            ;;
+        drop)
+            mkdir -p "${pcap_dir}/drop"
+            pcap_block=$(cat <<EOF
   - pcap-log:
       enabled: yes
       filename: ${pcap_dir}/drop/drop.pcap
@@ -94,12 +93,10 @@ EOF
       honor-pass-rules: no
 EOF
 )
-    fi
-
-    pcap_alerts_block=""
-    if [[ "${pcap_alerts_enabled}" == "yes" ]]; then
-        mkdir -p "${pcap_dir}/alerts"
-        pcap_alerts_block=$(cat <<EOF
+            ;;
+        alerts)
+            mkdir -p "${pcap_dir}/alerts"
+            pcap_block=$(cat <<EOF
   - pcap-log:
       enabled: yes
       filename: ${pcap_dir}/alerts/alerts.pcap
@@ -112,7 +109,12 @@ EOF
       honor-pass-rules: no
 EOF
 )
-    fi
+            ;;
+        *)
+            echo "Error: unsupported PCAP_MODE '${pcap_mode}'. Use one of: off, all, drop, alerts"
+            exit 1
+            ;;
+    esac
 
     tmp_render=$(mktemp)
     sed \
@@ -123,17 +125,13 @@ EOF
         -e "s|{{ interface2 }}|${INTERFACE2}|g" \
         "$TEMPLATE" > "${tmp_render}"
 
-    python3 - <<'PY' "${tmp_render}" "${pcap_all_block}" "${pcap_drop_block}" "${pcap_alerts_block}"
+    python3 - <<'PY' "${tmp_render}" "${pcap_block}"
 from pathlib import Path
 import sys
 path = Path(sys.argv[1])
-pcap_all = sys.argv[2]
-pcap_drop = sys.argv[3]
-pcap_alerts = sys.argv[4]
+pcap_block = sys.argv[2]
 text = path.read_text()
-text = text.replace("{{ pcap_all_output }}", pcap_all.rstrip())
-text = text.replace("{{ pcap_drop_output }}", pcap_drop.rstrip())
-text = text.replace("{{ pcap_alerts_output }}", pcap_alerts.rstrip())
+text = text.replace("{{ pcap_output }}", pcap_block.rstrip())
 path.write_text(text)
 PY
 
