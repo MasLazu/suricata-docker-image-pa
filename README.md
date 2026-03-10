@@ -71,8 +71,8 @@ Available environment variables:
     - `alerts`: capture packets associated with Suricata alerts
     - `tag`: capture tagged packets when rules use Suricata tagging
 
-- `PCAP_DIR` (default: `/var/log/suricata/pcap`)
-  - Base directory inside the container where PCAP files are written.
+- `PCAP_DIR` (default: `pcap`)
+  - Directory under Suricata's log directory where PCAP files are written. A relative value like `pcap` becomes `/var/log/suricata/pcap` in the container.
 
 - `PCAP_LIMIT` (default: `100mb`)
   - Rotation size for each PCAP file.
@@ -109,7 +109,7 @@ SURICATA_OPTIONS=
 
 # Optional Suricata pcap-log output
 PCAP_MODE=off
-PCAP_DIR=/var/log/suricata/pcap
+PCAP_DIR=pcap
 PCAP_LIMIT=100mb
 PCAP_MAX_FILES=1000
 ```
@@ -168,7 +168,7 @@ services:
       # - CATEGORIES_DEST=/var/lib/suricata/reputation.categories.txt
       # Optional single Suricata pcap-log mode
       # - PCAP_MODE=all
-      # - PCAP_DIR=/var/log/suricata/pcap
+      # - PCAP_DIR=pcap
       # - PCAP_LIMIT=100mb
       # - PCAP_MAX_FILES=1000
 ```

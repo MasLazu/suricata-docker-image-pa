@@ -55,20 +55,25 @@ if [ -f "$TEMPLATE" ]; then
     echo "Rendering ${TEMPLATE} to /etc/suricata/suricata.yaml"
 
     pcap_mode="${PCAP_MODE:-off}"
-    pcap_dir="${PCAP_DIR:-/var/log/suricata/pcap}"
+    pcap_dir="${PCAP_DIR:-pcap}"
     pcap_limit="${PCAP_LIMIT:-100mb}"
     pcap_max_files="${PCAP_MAX_FILES:-1000}"
+
+    # Suricata pcap-log filename is treated under the Suricata log dir, so prefer a relative path.
+    pcap_dir_rel="${pcap_dir#/var/log/suricata/}"
+    pcap_dir_rel="${pcap_dir_rel#/}"
+    pcap_dir_host="/var/log/suricata/${pcap_dir_rel}"
 
     pcap_block=""
     case "${pcap_mode}" in
         off|none|"")
             ;;
         all)
-            mkdir -p "${pcap_dir}/all"
+            mkdir -p "${pcap_dir_host}/all"
             pcap_block=$(cat <<EOF
   - pcap-log:
       enabled: yes
-      filename: ${pcap_dir}/all/all.pcap
+      filename: ${pcap_dir_rel}/all/all.pcap
       limit: ${pcap_limit}
       max-files: ${pcap_max_files}
       compression: none
@@ -79,11 +84,11 @@ EOF
 )
             ;;
         alerts)
-            mkdir -p "${pcap_dir}/alerts"
+            mkdir -p "${pcap_dir_host}/alerts"
             pcap_block=$(cat <<EOF
   - pcap-log:
       enabled: yes
-      filename: ${pcap_dir}/alerts/alerts.pcap
+      filename: ${pcap_dir_rel}/alerts/alerts.pcap
       limit: ${pcap_limit}
       max-files: ${pcap_max_files}
       compression: none
@@ -95,11 +100,11 @@ EOF
 )
             ;;
         tag)
-            mkdir -p "${pcap_dir}/tag"
+            mkdir -p "${pcap_dir_host}/tag"
             pcap_block=$(cat <<EOF
   - pcap-log:
       enabled: yes
-      filename: ${pcap_dir}/tag/tag.pcap
+      filename: ${pcap_dir_rel}/tag/tag.pcap
       limit: ${pcap_limit}
       max-files: ${pcap_max_files}
       compression: none
