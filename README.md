@@ -151,8 +151,8 @@ services:
     volumes:
       - ./rules:/var/lib/suricata/rules
       - ./suricata_socket:/var/run/suricata
-      # Reputation files persisted (optional)
-      - ./reputation:/var/lib/suricata
+      # Optional snapshot/debug mount for fetched IP reputation copies
+      - ./iprep-snapshots:/var/lib/suricata/iprep-snapshots
     environment:
       - SURICATA_MODE=ips
       - HOME_NET=10.10.12.0/24
@@ -171,6 +171,10 @@ services:
       # - PCAP_DIR=pcap
       # - PCAP_LIMIT=100mb
       # - PCAP_MAX_FILES=1000
+      # Optional IP reputation snapshots for debugging
+      # - IPREP_SNAPSHOT_ENABLED=yes
+      # - IPREP_SNAPSHOT_DIR=/var/lib/suricata/iprep-snapshots
+      # - IPREP_SNAPSHOT_KEEP=100
 ```
 
 ## Optional PCAP capture
@@ -204,6 +208,8 @@ Set `IPREP_BASE_URL` to enable periodic polling of an external reputation servic
 
 Files are written to `/var/lib/suricata/reputation.list` and `/var/lib/suricata/reputation.categories.txt`. Suricata's configuration templates have the `reputation` section enabled and the helper script triggers a reload (via `suricatasc reload-rules` or SIGHUP) after updates.
 
+When `IPREP_SNAPSHOT_ENABLED=yes`, each successful fetch also writes timestamped snapshot copies into `IPREP_SNAPSHOT_DIR`, plus `latest-*` copies for quick inspection. This is useful for debugging and correlating tests with the exact ip reputation state loaded on the sensor.
+
 Environment variable summary:
 
 | Variable | Purpose | Default |
@@ -214,6 +220,9 @@ Environment variable summary:
 | CATEGORIES_ENDPOINT | Path to categories file | /api/v1/reputation/categories |
 | REPUTATION_DEST | Destination path for list | /var/lib/suricata/reputation.list |
 | CATEGORIES_DEST | Destination path for categories | /var/lib/suricata/reputation.categories.txt |
+| IPREP_SNAPSHOT_ENABLED | Save timestamped copies of fetched reputation files | yes |
+| IPREP_SNAPSHOT_DIR | Snapshot directory inside container | /var/lib/suricata/iprep-snapshots |
+| IPREP_SNAPSHOT_KEEP | Number of timestamped snapshots to retain per file type | 100 |
 
 ### Manual Test
 

@@ -5,6 +5,9 @@ REPUTATION_ENDPOINT="${REPUTATION_ENDPOINT:-/api/v1/reputation/list}"
 CATEGORIES_ENDPOINT="${CATEGORIES_ENDPOINT:-/api/v1/reputation/categories}"
 REPUTATION_DEST="${REPUTATION_DEST:-/var/lib/suricata/reputation.list}"
 CATEGORIES_DEST="${CATEGORIES_DEST:-/var/lib/suricata/reputation.categories.txt}"
+IPREP_SNAPSHOT_ENABLED="${IPREP_SNAPSHOT_ENABLED:-yes}"
+IPREP_SNAPSHOT_DIR="${IPREP_SNAPSHOT_DIR:-/var/lib/suricata/iprep-snapshots}"
+IPREP_SNAPSHOT_KEEP="${IPREP_SNAPSHOT_KEEP:-100}"
 TMP_DIR="/tmp/iprep"
 INTERVAL_SECONDS="${IPREP_POLL_INTERVAL_SECONDS:-300}" # default 5 minutes
 
@@ -46,6 +49,21 @@ fetch_once() {
   mv "${rep_tmp}" "${REPUTATION_DEST}" 2>/dev/null || cp "${rep_tmp}" "${REPUTATION_DEST}"
   mv "${cats_tmp}" "${CATEGORIES_DEST}" 2>/dev/null || cp "${cats_tmp}" "${CATEGORIES_DEST}"
   echo "Updated reputation and categories files." >&2
+
+  if [[ "${IPREP_SNAPSHOT_ENABLED}" == "yes" ]]; then
+    mkdir -p "${IPREP_SNAPSHOT_DIR}"
+    local snap_ts rep_base cats_base
+    snap_ts=$(date -u +%Y%m%dT%H%M%SZ)
+    rep_base=$(basename "${REPUTATION_DEST}")
+    cats_base=$(basename "${CATEGORIES_DEST}")
+    cp "${REPUTATION_DEST}" "${IPREP_SNAPSHOT_DIR}/${snap_ts}-${rep_base}"
+    cp "${CATEGORIES_DEST}" "${IPREP_SNAPSHOT_DIR}/${snap_ts}-${cats_base}"
+    cp "${REPUTATION_DEST}" "${IPREP_SNAPSHOT_DIR}/latest-${rep_base}"
+    cp "${CATEGORIES_DEST}" "${IPREP_SNAPSHOT_DIR}/latest-${cats_base}"
+    ls -1t "${IPREP_SNAPSHOT_DIR}"/*-"${rep_base}" 2>/dev/null | tail -n +$((IPREP_SNAPSHOT_KEEP + 1)) | xargs -r rm -f
+    ls -1t "${IPREP_SNAPSHOT_DIR}"/*-"${cats_base}" 2>/dev/null | tail -n +$((IPREP_SNAPSHOT_KEEP + 1)) | xargs -r rm -f
+    echo "Snapshot saved to ${IPREP_SNAPSHOT_DIR}." >&2
+  fi
 
   # Trigger Suricata to reload rules/datasets if suricatasc is available
   if command -v suricatasc >/dev/null 2>&1; then
