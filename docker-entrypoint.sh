@@ -53,13 +53,70 @@ if [ -f "$TEMPLATE" ]; then
         exit 1
     fi
     echo "Rendering ${TEMPLATE} to /etc/suricata/suricata.yaml"
+
+    pcap_all_enabled="${PCAP_ALL_ENABLED:-no}"
+    pcap_alerts_enabled="${PCAP_ALERTS_ENABLED:-no}"
+    pcap_dir="${PCAP_DIR:-/var/log/suricata/pcap}"
+    pcap_limit="${PCAP_LIMIT:-100mb}"
+    pcap_max_files="${PCAP_MAX_FILES:-1000}"
+
+    pcap_all_block=""
+    if [[ "${pcap_all_enabled}" == "yes" ]]; then
+        mkdir -p "${pcap_dir}/all"
+        pcap_all_block=$(cat <<EOF
+  - pcap-log:
+      enabled: yes
+      filename: ${pcap_dir}/all/all.pcap
+      limit: ${pcap_limit}
+      max-files: ${pcap_max_files}
+      compression: none
+      mode: normal
+      use-stream-depth: no
+      honor-pass-rules: no
+EOF
+)
+    fi
+
+    pcap_alerts_block=""
+    if [[ "${pcap_alerts_enabled}" == "yes" ]]; then
+        mkdir -p "${pcap_dir}/alerts"
+        pcap_alerts_block=$(cat <<EOF
+  - pcap-log:
+      enabled: yes
+      filename: ${pcap_dir}/alerts/alerts.pcap
+      limit: ${pcap_limit}
+      max-files: ${pcap_max_files}
+      compression: none
+      mode: normal
+      conditional: alerts
+      use-stream-depth: no
+      honor-pass-rules: no
+EOF
+)
+    fi
+
+    tmp_render=$(mktemp)
     sed \
         -e "s|{{ home_net }}|${HOME_NET}|g" \
         -e "s|{{ http_ports }}|${HTTP_PORTS:-80}|g" \
         -e "s|{{ ssh_ports }}|${SSH_PORTS:-22}|g" \
         -e "s|{{ interface1 }}|${INTERFACE1}|g" \
         -e "s|{{ interface2 }}|${INTERFACE2}|g" \
-        "$TEMPLATE" > /etc/suricata/suricata.yaml
+        "$TEMPLATE" > "${tmp_render}"
+
+    python3 - <<'PY' "${tmp_render}" "${pcap_all_block}" "${pcap_alerts_block}"
+from pathlib import Path
+import sys
+path = Path(sys.argv[1])
+pcap_all = sys.argv[2]
+pcap_alerts = sys.argv[3]
+text = path.read_text()
+text = text.replace("{{ pcap_all_output }}", pcap_all.rstrip())
+text = text.replace("{{ pcap_alerts_output }}", pcap_alerts.rstrip())
+path.write_text(text)
+PY
+
+    mv "${tmp_render}" /etc/suricata/suricata.yaml
 fi
 
 # If the first command does not look like argument, assume its a

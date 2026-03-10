@@ -69,6 +69,9 @@ outputs:
             alerts: yes
             flows: all
 
+{{ pcap_all_output }}
+{{ pcap_alerts_output }}
+
   - stats:
       enabled: yes
       filename: /var/log/suricata/stats.log

@@ -64,6 +64,21 @@ Available environment variables:
 - `SURICATA_OPTIONS` (optional)
   - Additional Suricata command-line options (optional). Example: `-k none`.
 
+- `PCAP_ALL_ENABLED` (default: `no`)
+  - Enable a `pcap-log` output that writes all packets seen by Suricata.
+
+- `PCAP_ALERTS_ENABLED` (default: `no`)
+  - Enable a second `pcap-log` output with `conditional: alerts` to write only packets associated with Suricata alerts. In IPS mode this is a practical approximation for blocked/interesting traffic.
+
+- `PCAP_DIR` (default: `/var/log/suricata/pcap`)
+  - Base directory inside the container where PCAP files are written.
+
+- `PCAP_LIMIT` (default: `100mb`)
+  - Rotation size for each PCAP file.
+
+- `PCAP_MAX_FILES` (default: `1000`)
+  - Number of rotated PCAP files to retain for each output.
+
 Example minimal `.env` file:
 
 ```ini
@@ -90,6 +105,13 @@ ENABLE_CRON=yes
 
 # Extra options
 SURICATA_OPTIONS=
+
+# Optional PCAP outputs
+PCAP_ALL_ENABLED=no
+PCAP_ALERTS_ENABLED=no
+PCAP_DIR=/var/log/suricata/pcap
+PCAP_LIMIT=100mb
+PCAP_MAX_FILES=1000
 ```
 
 ## Templates
@@ -144,7 +166,34 @@ services:
       # - CATEGORIES_ENDPOINT=/api/v1/reputation/categories
       # - REPUTATION_DEST=/var/lib/suricata/reputation.list
       # - CATEGORIES_DEST=/var/lib/suricata/reputation.categories.txt
+      # PCAP capture for evaluation / packet counting
+      # - PCAP_ALL_ENABLED=yes
+      # - PCAP_ALERTS_ENABLED=yes
+      # - PCAP_DIR=/var/log/suricata/pcap
+      # - PCAP_LIMIT=100mb
+      # - PCAP_MAX_FILES=1000
 ```
+
+## Optional PCAP capture
+
+This image can optionally enable Suricata `pcap-log` outputs at runtime without editing the YAML templates by hand.
+
+When enabled, the entrypoint injects one or both of these outputs into the rendered `suricata.yaml`:
+
+- **All packets** via `PCAP_ALL_ENABLED=yes`
+- **Alert-associated packets** via `PCAP_ALERTS_ENABLED=yes`
+
+Files are written under `PCAP_DIR` with separate subdirectories:
+
+- `${PCAP_DIR}/all/`
+- `${PCAP_DIR}/alerts/`
+
+This is useful for lab evaluation where you want to compare:
+
+- all observed packets
+- Suricata-interesting / alert-associated packets
+
+and then classify packet counts later by source/destination IP.
 
 ## IP Reputation Integration
 
